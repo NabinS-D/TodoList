@@ -8,7 +8,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.9
-      - key: MONGODB_URL
-        fromDatabase:
-          name: fastapi-db
-          property: connectionString
