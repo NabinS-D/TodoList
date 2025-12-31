@@ -13,6 +13,7 @@ client = AsyncIOMotorClient(MONGODB_URL)
 database = client.fastapi_db
 employees = database.employees
 todos = database.todos
+chat_messages = database.chat_messages
 
 # Simple connection test
 async def connect_to_mongo():

@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from mongodb import employees, todos, connect_to_mongo
 from mongodb_models import Employee, Gender, Todo, Priority, Status
 from datetime import datetime
+from typing import List
+from chat_manager import manager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -265,4 +267,55 @@ async def delete_all_todos():
         "message": f"Deleted {result.deleted_count} todos successfully.",
         "data": {"deleted_count": result.deleted_count}
     }
+
+@app.websocket("/ws/chat")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    username = None
+    try:
+        # Wait for join message
+        data = await websocket.receive_json()
+        if data.get("type") == "join":
+            username = data.get("user", f"User_{len(manager.active_connections)}")
+            await manager.connect(websocket, username)
+            
+            # Send chat history to new user
+            await manager.send_chat_history(websocket)
+        
+        while True:
+            data = await websocket.receive_json()
+            
+            if data.get("type") == "message":
+                # Save message to database
+                await manager.save_message(username, data.get("message", ""))
+                
+                # Broadcast to all users
+                await manager.broadcast({
+                    "type": "message",
+                    "user": username,
+                    "message": data.get("message", ""),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            elif data.get("type") == "typing":
+                await manager.broadcast({
+                    "type": "typing",
+                    "user": username
+                })
+                
+    except WebSocketDisconnect:
+        if username:
+            left_user = manager.disconnect(websocket)
+            await manager.broadcast({
+                "type": "system",
+                "message": f"{left_user} left the chat"
+            })
+            await manager.broadcast({
+                "type": "user_count",
+                "count": len(manager.active_connections)
+            })
+
+# Chat page route
+@app.get("/chat")
+async def read_chat():
+    return FileResponse("static/chat.html")
 

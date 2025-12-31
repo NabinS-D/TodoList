@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body, html {
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+            box-sizing: border-box;
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        .message {
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px) scale(0.95);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .typing-indicator {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .message-bubble {
+            position: relative;
+            transition: all 0.2s ease;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+        
+        .message-bubble:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .avatar-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .avatar-gradient-alt {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .status-dot {
+            animation: breathe 2s infinite;
+        }
+        
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 87, 108, 0.3);
+        }
+        
+        .notification-toast {
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { 
+                opacity: 0; 
+                transform: translateX(100px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div class="container mx-auto px-4 py-4 max-w-6xl">
+        <!-- Header -->
+        <div class="glass-effect rounded-2xl shadow-xl p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-comments text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            FastAPI Chat Room
+                        </h1>
+                        <p class="text-gray-600 flex items-center space-x-3 mt-1 text-sm">
+                            <span id="connection-status" class="inline-flex items-center">
+                                <span class="w-2 h-2 bg-red-500 rounded-full mr-2 status-dot"></span>
+                                <span class="font-medium">Disconnected</span>
+                            </span>
+                            <span class="text-gray-400">•</span>
+                            <span id="user-count" class="text-gray-600 font-medium">
+                                <i class="fas fa-users mr-1"></i>0 users online
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <button id="connect-btn" onclick="toggleConnection()" 
+                        class="btn-primary text-white px-5 py-2 rounded-xl font-semibold flex items-center space-x-2 shadow-lg">
+                    <i class="fas fa-plug"></i>
+                    <span>Connect</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="glass-effect rounded-2xl shadow-xl p-4 mb-4" style="height: calc(100vh - 320px);">
+            <div id="chat-messages" class="chat-messages space-y-3">
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-comment-dots text-2xl text-purple-600"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-1">Welcome to Chat Room</h3>
+                    <p class="text-gray-500 text-sm">Enter your username and connect to start chatting!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="glass-effect rounded-2xl shadow-xl p-4">
+            <div class="space-y-3">
+                <div class="flex items-center space-x-3">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400 text-sm"></i>
+                        </div>
+                        <input type="text" id="username-input" placeholder="Enter your username..." 
+                               class="w-full pl-10 pr-3 py-2 bg-white/80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 input-glow transition-all duration-200 text-sm"
+                               maxlength="20">
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-message text-gray-400 text-sm"></i>
+                        </div>
+                        <input type="text" id="message-input" placeholder="Type your message..." 
+                               class="w-full pl-10 pr-3 py-2 bg-white/80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 input-glow transition-all duration-200 text-sm"
+                               disabled>
+                    </div>
+                    <button id="send-btn" onclick="sendMessage()" 
+                            class="btn-primary text-white px-6 py-2 rounded-lg font-semibold flex items-center space-x-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+                            disabled>
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Send</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="typing-indicator" class="mt-3 text-center hidden">
+                <span class="typing-indicator inline-flex items-center px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-medium">
+                    <i class="fas fa-ellipsis-h mr-2"></i>
+                    Someone is typing...
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let websocket = null;
+        let username = '';
+        let isTyping = false;
+        let typingTimeout = null;
+
+        // DOM Elements
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const usernameInput = document.getElementById('username-input');
+        const sendBtn = document.getElementById('send-btn');
+        const connectBtn = document.getElementById('connect-btn');
+        const connectionStatus = document.getElementById('connection-status');
+        const userCount = document.getElementById('user-count');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        function toggleConnection() {
+            if (websocket) {
+                disconnect();
+            } else {
+                connect();
+            }
+        }
+
+        function connect() {
+            username = usernameInput.value.trim();
+            if (!username) {
+                showNotification('Please enter a username', 'error');
+                usernameInput.focus();
+                return;
+            }
+
+            // Connect to WebSocket
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+            websocket = new WebSocket(wsUrl);
+
+            websocket.onopen = function() {
+                updateConnectionStatus(true);
+                usernameInput.disabled = true;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                
+                // Update button styling
+                connectBtn.innerHTML = '<i class="fas fa-unlink mr-2"></i>Disconnect';
+                connectBtn.classList.remove('btn-primary');
+                connectBtn.classList.add('btn-danger');
+                
+                // Send join message
+                websocket.send(JSON.stringify({
+                    type: 'join',
+                    user: username
+                }));
+                
+                showNotification(`Connected as ${username}`, 'success');
+                messageInput.focus();
+            };
+
+            websocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+
+            websocket.onclose = function() {
+                updateConnectionStatus(false);
+                showNotification('Disconnected from chat', 'info');
+            };
+
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                showNotification('Connection error', 'error');
+                updateConnectionStatus(false);
+            };
+        }
+
+        function disconnect() {
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+            
+            updateConnectionStatus(false);
+            usernameInput.disabled = false;
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+            
+            // Update button styling
+            connectBtn.innerHTML = '<i class="fas fa-plug mr-2"></i>Connect';
+            connectBtn.classList.remove('btn-danger');
+            connectBtn.classList.add('btn-primary');
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDot = connectionStatus.querySelector('span');
+            const statusText = connectionStatus.querySelector('span:last-child');
+            
+            if (connected) {
+                statusDot.className = 'w-3 h-3 bg-green-500 rounded-full mr-2 status-dot';
+                statusText.textContent = 'Connected';
+                statusText.className = 'font-medium text-green-600';
+            } else {
+                statusDot.className = 'w-3 h-3 bg-red-500 rounded-full mr-2 status-dot';
+                statusText.textContent = 'Disconnected';
+                statusText.className = 'font-medium text-red-600';
+            }
+        }
+
+        function handleMessage(data) {
+            switch(data.type) {
+                case 'message':
+                    displayMessage(data.user, data.message, data.timestamp);
+                    break;
+                case 'system':
+                    displaySystemMessage(data.message);
+                    break;
+                case 'typing':
+                    showTypingIndicator(data.user);
+                    break;
+                case 'user_count':
+                    userCount.textContent = `${data.count} users online`;
+                    break;
+            }
+        }
+
+        function displayMessage(user, message, timestamp) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message flex items-start space-x-3';
+            
+            const isCurrentUser = user === username;
+            const time = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            messageDiv.innerHTML = `
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 rounded-full ${isCurrentUser ? 'avatar-gradient' : 'avatar-gradient-alt'} flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                        ${user.charAt(0).toUpperCase()}
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="font-semibold text-gray-800">${escapeHtml(user)}</span>
+                        <span class="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded-full">${time}</span>
+                        ${isCurrentUser ? '<span class="text-xs bg-purple-100 text-purple-600 px-1 py-0.5 rounded-full font-medium">You</span>' : ''}
+                    </div>
+                    <div class="message-bubble bg-gradient-to-r ${isCurrentUser ? 'from-purple-50 to-pink-50' : 'from-gray-50 to-slate-50'} rounded-xl px-3 py-2 text-gray-800 shadow-sm">
+                        <p class="text-sm leading-relaxed">${escapeHtml(message)}</p>
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function displaySystemMessage(message) {
+            const systemDiv = document.createElement('div');
+            systemDiv.className = 'text-center py-3';
+            systemDiv.innerHTML = `
+                <span class="text-sm text-gray-500 italic bg-gradient-to-r from-purple-100 to-pink-100 px-4 py-2 rounded-full font-medium">
+                    ${escapeHtml(message)}
+                </span>
+            `;
+            chatMessages.appendChild(systemDiv);
+            scrollToBottom();
+        }
+
+        function showTypingIndicator(user) {
+            if (user !== username) {
+                typingIndicator.classList.remove('hidden');
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    typingIndicator.classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !websocket) return;
+
+            websocket.send(JSON.stringify({
+                type: 'message',
+                user: username,
+                message: message
+            }));
+
+            messageInput.value = '';
+            messageInput.focus();
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification-toast fixed top-6 right-6 px-6 py-4 rounded-2xl shadow-2xl z-50 flex items-center space-x-3 ${
+                type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 
+                type === 'error' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 
+                'bg-gradient-to-r from-blue-500 to-purple-500'
+            } text-white`;
+            
+            const icon = type === 'success' ? 'fa-check-circle' : 
+                         type === 'error' ? 'fa-exclamation-circle' : 
+                         'fa-info-circle';
+            
+            notification.innerHTML = `
+                <i class="fas ${icon} text-xl"></i>
+                <span class="font-medium">${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            } else if (websocket) {
+                // Send typing indicator
+                websocket.send(JSON.stringify({
+                    type: 'typing',
+                    user: username
+                }));
+            }
+        });
+
+        usernameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                connect();
+            }
+        });
+
+        // Focus username input on load
+        usernameInput.focus();
+    </script>
+</body>
+</html>
