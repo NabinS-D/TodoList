@@ -524,7 +524,7 @@
             groupChatTabMobile.classList.remove('active');
             
             const displayName = currentPrivateDisplayName || currentPrivateUser;
-            chatTitle.textContent = `Private Chat - ${displayName}`;
+            chatTitle.textContent = displayName;
             messageInput.placeholder = `Message to ${displayName}...`;
             
             // Enable input if connected
