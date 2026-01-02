@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from enum import Enum
 from typing import Optional
 from datetime import datetime
@@ -18,30 +18,53 @@ class Status(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
 
-# MongoDB model - just Pydantic
 class Employee(BaseModel):
     name: str
-    surname: str
-    age: int
+    position: str
+    department: str
+    email: EmailStr
     gender: Gender
-    id: Optional[int] = None  # MongoDB will auto-generate _id
-    
-    class Config:
-        json_encoders = {
-            Gender: lambda v: v.value
-        }
+    salary: float
+    hire_date: datetime
 
 class Todo(BaseModel):
-    title: str = Field(..., min_length=1, max_length=200)
-    description: Optional[str] = Field(None, max_length=1000)
-    priority: Priority = Priority.MEDIUM
-    status: Status = Status.PENDING
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    
-    class Config:
-        json_encoders = {
-            Priority: lambda v: v.value,
-            Status: lambda v: v.value,
-            datetime: lambda v: v.isoformat() if v else None
-        }
+    title: str
+    description: str
+    priority: Priority
+    status: Status
+    assigned_to: str
+    due_date: datetime
+
+# User models for authentication
+class User(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: str
+    password: str = Field(..., min_length=6)
+    display_name: Optional[str] = None
+    is_active: bool = True
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class UserResponse(BaseModel):
+    username: str
+    email: str
+    display_name: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+# Private message models
+class PrivateMessage(BaseModel):
+    sender: str
+    receiver: str
+    message: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    is_read: bool = False
+
+class PrivateChatRoom(BaseModel):
+    user1: str
+    user2: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_message: Optional[str] = None
+    last_message_time: Optional[datetime] = None

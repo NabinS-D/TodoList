@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastAPI Chat</title>
+    <title>Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -48,21 +48,21 @@
         @keyframes slideIn {
             from { 
                 opacity: 0; 
-                transform: translateY(20px) scale(0.95);
+                transform: translateY(20px); 
             }
             to { 
                 opacity: 1; 
-                transform: translateY(0) scale(1);
+                transform: translateY(0); 
             }
         }
         
         .typing-indicator {
-            animation: pulse 1.5s infinite;
+            animation: fadeIn 0.3s ease;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 1; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .gradient-bg {
@@ -97,12 +97,12 @@
         }
         
         .status-dot {
-            animation: breathe 2s infinite;
+            animation: pulse 2s infinite;
         }
         
-        @keyframes breathe {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.8; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
         .input-glow:focus {
@@ -116,7 +116,7 @@
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
         
         .btn-danger {
@@ -145,74 +145,112 @@
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen">
-    <div class="container mx-auto px-4 py-4 max-w-6xl">
-        <!-- Header -->
-        <div class="glass-effect rounded-2xl shadow-xl p-4 mb-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <i class="fas fa-comments text-white text-lg"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-800 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                            FastAPI Chat Room
-                        </h1>
-                        <p class="text-gray-600 flex items-center space-x-3 mt-1 text-sm">
-                            <span id="connection-status" class="inline-flex items-center">
-                                <span class="w-2 h-2 bg-red-500 rounded-full mr-2 status-dot"></span>
-                                <span class="font-medium">Disconnected</span>
-                            </span>
-                            <span class="text-gray-400">•</span>
-                            <span id="user-count" class="text-gray-600 font-medium">
-                                <i class="fas fa-users mr-1"></i>0 users online
-                            </span>
-                        </p>
-                    </div>
-                </div>
-                <button id="connect-btn" onclick="toggleConnection()" 
-                        class="btn-primary text-white px-5 py-2 rounded-xl font-semibold flex items-center space-x-2 shadow-lg">
-                    <i class="fas fa-plug"></i>
-                    <span>Connect</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Chat Messages -->
-        <div class="glass-effect rounded-2xl shadow-xl p-4 mb-4" style="height: calc(100vh - 320px);">
-            <div id="chat-messages" class="chat-messages space-y-3">
-                <div class="text-center py-8">
-                    <div class="w-16 h-16 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-comment-dots text-2xl text-purple-600"></i>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-700 mb-1">Welcome to Chat Room</h3>
-                    <p class="text-gray-500 text-sm">Enter your username and connect to start chatting!</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Message Input -->
-        <div class="glass-effect rounded-2xl shadow-xl p-4">
-            <div class="space-y-3">
-                <div class="flex items-center space-x-3">
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-user text-gray-400 text-sm"></i>
+<body class="bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100">
+    <div class="container mx-auto p-4 h-screen flex">
+        <!-- Sidebar with Online Users -->
+        <div class="w-64 mr-4">
+            <div class="glass-effect rounded-2xl shadow-xl p-4 h-full flex flex-col">
+                <!-- User Info -->
+                <div class="mb-4 pb-4 border-b border-gray-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-white"></i>
                         </div>
-                        <input type="text" id="username-input" placeholder="Enter your username..." 
-                               class="w-full pl-10 pr-3 py-2 bg-white/80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 input-glow transition-all duration-200 text-sm"
-                               maxlength="20">
+                        <div class="flex-1">
+                            <div id="current-user-name" class="font-semibold text-gray-800">Loading...</div>
+                            <div class="text-xs text-green-600 flex items-center">
+                                <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                Online
+                            </div>
+                        </div>
+                        <button onclick="logout()" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
                     </div>
                 </div>
                 
+                <!-- Chat Tabs -->
+                <div class="mb-4">
+                    <div class="flex space-x-2">
+                        <button id="group-chat-tab" class="chat-tab active flex-1 px-3 py-2 rounded-lg text-sm font-medium">
+                            <i class="fas fa-users mr-2"></i>Group Chat
+                        </button>
+                        <button id="private-chat-tab" class="chat-tab flex-1 px-3 py-2 rounded-lg text-sm font-medium">
+                            <i class="fas fa-envelope mr-2"></i>Private
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Online Users -->
+                <div class="flex-1 overflow-hidden">
+                    <div class="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-circle text-green-500 text-xs mr-2 animate-pulse"></i>
+                            Online Users
+                        </div>
+                        <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">
+                            <span id="online-count">0</span>
+                        </span>
+                    </div>
+                    <div id="online-users" class="space-y-2 overflow-y-auto" style="max-height: calc(100vh - 280px);">
+                        <!-- Online users will be listed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col min-h-0">
+            <!-- Header -->
+            <div class="glass-effect rounded-2xl shadow-xl p-4 mb-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-comments text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 id="chat-title" class="text-2xl font-bold text-gray-800 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                Group Chat
+                            </h1>
+                            <p class="text-gray-600 flex items-center space-x-3 mt-1 text-sm">
+                                <span id="connection-status" class="inline-flex items-center">
+                                    <span class="w-2 h-2 bg-red-500 rounded-full mr-2 status-dot"></span>
+                                    <span class="font-medium">Disconnected</span>
+                                </span>
+                                <span class="text-gray-400">•</span>
+                                <span id="user-count" class="text-gray-600 font-medium">
+                                    <i class="fas fa-users mr-1"></i>0 users online
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="glass-effect rounded-2xl shadow-xl p-4 mb-4 flex-1 min-h-0 overflow-hidden">
+                <div id="chat-messages" class="chat-messages space-y-3 h-full">
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-comment-dots text-2xl text-purple-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-1">Welcome to Chat</h3>
+                        <p class="text-gray-500 text-sm">You're connected! Start chatting with others!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <div class="glass-effect rounded-2xl shadow-xl p-4">
                 <div class="flex items-center space-x-3">
                     <div class="relative flex-1">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-message text-gray-400 text-sm"></i>
                         </div>
-                        <input type="text" id="message-input" placeholder="Type your message..." 
-                               class="w-full pl-10 pr-3 py-2 bg-white/80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 input-glow transition-all duration-200 text-sm"
-                               disabled>
+                        <input type="text" id="message-input" 
+                           placeholder="Type your message..." 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                           disabled>
                     </div>
                     <button id="send-btn" onclick="sendMessage()" 
                             class="btn-primary text-white px-6 py-2 rounded-lg font-semibold flex items-center space-x-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
@@ -221,235 +259,454 @@
                         <span>Send</span>
                     </button>
                 </div>
-            </div>
-            
-            <div id="typing-indicator" class="mt-3 text-center hidden">
-                <span class="typing-indicator inline-flex items-center px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-medium">
-                    <i class="fas fa-ellipsis-h mr-2"></i>
-                    Someone is typing...
-                </span>
+                
+                <div id="typing-indicator" class="mt-3 text-center hidden">
+                    <span class="typing-indicator inline-flex items-center px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-medium">
+                        <i class="fas fa-ellipsis-h mr-2"></i>
+                        Someone is typing...
+                    </span>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         let websocket = null;
-        let username = '';
+        let currentUser = null;
+        let currentChatType = 'group'; // 'group' or 'private'
+        let currentPrivateUser = null;
+        let currentPrivateDisplayName = null;
+        let suppressSystemAnnouncements = false;
         let isTyping = false;
         let typingTimeout = null;
+        let unreadCounts = {};
+        let userDisplayMap = {};
 
         // DOM Elements
         const chatMessages = document.getElementById('chat-messages');
         const messageInput = document.getElementById('message-input');
-        const usernameInput = document.getElementById('username-input');
         const sendBtn = document.getElementById('send-btn');
-        const connectBtn = document.getElementById('connect-btn');
         const connectionStatus = document.getElementById('connection-status');
         const userCount = document.getElementById('user-count');
         const typingIndicator = document.getElementById('typing-indicator');
+        const currentUser_name = document.getElementById('current-user-name');
+        const onlineUsers = document.getElementById('online-users');
+        const onlineCount = document.getElementById('online-count');
+        const chatTitle = document.getElementById('chat-title');
+        const groupChatTab = document.getElementById('group-chat-tab');
+        const privateChatTab = document.getElementById('private-chat-tab');
 
-        function toggleConnection() {
-            if (websocket) {
-                disconnect();
-            } else {
-                connect();
-            }
-        }
-
-        function connect() {
-            username = usernameInput.value.trim();
-            if (!username) {
-                showNotification('Please enter a username', 'error');
-                usernameInput.focus();
+        // Check authentication on load
+        window.addEventListener('load', async () => {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
+                window.location.href = '/login';
                 return;
             }
-
-            // Connect to WebSocket
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
-            websocket = new WebSocket(wsUrl);
-
-            websocket.onopen = function() {
-                updateConnectionStatus(true);
-                usernameInput.disabled = true;
-                messageInput.disabled = false;
-                sendBtn.disabled = false;
-                
-                // Update button styling
-                connectBtn.innerHTML = '<i class="fas fa-unlink mr-2"></i>Disconnect';
-                connectBtn.classList.remove('btn-primary');
-                connectBtn.classList.add('btn-danger');
-                
-                // Send join message
-                websocket.send(JSON.stringify({
-                    type: 'join',
-                    user: username
-                }));
-                
-                showNotification(`Connected as ${username}`, 'success');
-                messageInput.focus();
-            };
-
-            websocket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                handleMessage(data);
-            };
-
-            websocket.onclose = function() {
-                updateConnectionStatus(false);
-                showNotification('Disconnected from chat', 'info');
-            };
-
-            websocket.onerror = function(error) {
-                console.error('WebSocket error:', error);
-                showNotification('Connection error', 'error');
-                updateConnectionStatus(false);
-            };
-        }
-
-        function disconnect() {
-            if (websocket) {
-                websocket.close();
-                websocket = null;
+            
+            currentUser = JSON.parse(user);
+            currentUser_name.textContent = currentUser.display_name || currentUser.username;
+            
+            // Show welcome message for newly logged in users
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('welcome') === 'true') {
+                showNotification(`Welcome back, ${currentUser.display_name || currentUser.username}! You can now start chatting.`, 'success');
             }
             
-            updateConnectionStatus(false);
-            usernameInput.disabled = false;
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
+            // Verify token is still valid
+            try {
+                const response = await fetch('/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    logout();
+                    return;
+                }
+                
+                // Auto-connect to WebSocket
+                await connectWebSocket();
+                
+            } catch (error) {
+                console.error('Auth verification failed:', error);
+                logout();
+            }
+        });
+
+        // Tab switching
+        groupChatTab.addEventListener('click', () => {
+            switchToGroupChat();
+        });
+
+        privateChatTab.addEventListener('click', () => {
+            switchToPrivateChat();
+        });
+
+        function switchToGroupChat() {
+            currentChatType = 'group';
+            currentPrivateUser = null;
             
-            // Update button styling
-            connectBtn.innerHTML = '<i class="fas fa-plug mr-2"></i>Connect';
-            connectBtn.classList.remove('btn-danger');
-            connectBtn.classList.add('btn-primary');
+            groupChatTab.classList.add('active');
+            privateChatTab.classList.remove('active');
+            
+            chatTitle.textContent = 'Group Chat';
+            messageInput.placeholder = 'Type your message...';
+            
+            // Clear user selection highlights
+            document.querySelectorAll('.online-user').forEach(userElement => {
+                userElement.classList.remove('bg-purple-50', 'border-l-4', 'border-purple-500');
+            });
+            
+            // Enable input if connected
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            }
+            
+            // Load group chat history
+            loadGroupChatHistory();
+        }
+
+        function switchToPrivateChat() {
+            if (!currentPrivateUser) {
+                showNotification('Please select a user to start private chat', 'warning');
+                return;
+            }
+            
+            currentChatType = 'private';
+            
+            privateChatTab.classList.add('active');
+            groupChatTab.classList.remove('active');
+            
+            const displayName = currentPrivateDisplayName || currentPrivateUser;
+            chatTitle.textContent = `Private Chat - ${displayName}`;
+            messageInput.placeholder = `Message to ${displayName}...`;
+            
+            // Enable input if connected
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            }
+            
+            // Load private chat history
+            loadPrivateChatHistory();
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
         }
 
         function updateConnectionStatus(connected) {
-            const statusDot = connectionStatus.querySelector('span');
-            const statusText = connectionStatus.querySelector('span:last-child');
+            const statusDot = connectionStatus.querySelector('.status-dot');
+            const statusText = connectionStatus.querySelector('.font-medium');
             
             if (connected) {
-                statusDot.className = 'w-3 h-3 bg-green-500 rounded-full mr-2 status-dot';
+                statusDot.classList.remove('bg-red-500');
+                statusDot.classList.add('bg-green-500');
                 statusText.textContent = 'Connected';
-                statusText.className = 'font-medium text-green-600';
             } else {
-                statusDot.className = 'w-3 h-3 bg-red-500 rounded-full mr-2 status-dot';
+                statusDot.classList.remove('bg-green-500');
+                statusDot.classList.add('bg-red-500');
                 statusText.textContent = 'Disconnected';
-                statusText.className = 'font-medium text-red-600';
             }
+        }
+
+        async function connectWebSocket() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                logout();
+                return;
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+            console.log('Connecting to WebSocket:', wsUrl); // Debug log
+            
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = () => {
+                console.log('WebSocket connected successfully'); // Debug log
+                updateConnectionStatus(true);
+                // Enable message input immediately
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                // Suppress initial system announcements briefly for a clean first view
+                suppressSystemAnnouncements = true;
+                setTimeout(() => { suppressSystemAnnouncements = false; }, 3000);
+                
+                // Send join message with authentication
+                websocket.send(JSON.stringify({
+                    type: 'join',
+                    user: currentUser.username,
+                    token: localStorage.getItem('token')
+                }));
+            };
+            
+            websocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Received WebSocket message:', data); // Debug log
+                handleMessage(data);
+            };
+            
+            websocket.onclose = () => {
+                updateConnectionStatus(false);
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            };
+            
+            websocket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus(false);
+            };
         }
 
         function handleMessage(data) {
-            switch(data.type) {
+            switch (data.type) {
                 case 'message':
-                    displayMessage(data.user, data.message, data.timestamp);
+                    if (currentChatType === 'group') {
+                        addMessage(data.user, data.message, data.timestamp, false);
+                    }
+                    break;
+                case 'private_message':
+                    if (currentChatType === 'private' && 
+                        ((data.sender === currentUser.username && data.receiver === currentPrivateUser) ||
+                         (data.sender === currentPrivateUser && data.receiver === currentUser.username))) {
+                        hideEmptyDMPlaceholder();
+                        addMessage(data.sender, data.message, data.timestamp, true);
+                    } else if (data.receiver === currentUser.username) {
+                        incrementUnread(data.sender);
+                        const dn = getDisplayName(data.sender);
+                        showMessageToast(data.sender, dn, data.message);
+                    }
                     break;
                 case 'system':
-                    displaySystemMessage(data.message);
-                    break;
-                case 'typing':
-                    showTypingIndicator(data.user);
+                    if (currentChatType === 'group') {
+                        if (suppressSystemAnnouncements) return;
+                        addSystemMessage(data.message);
+                    }
                     break;
                 case 'user_count':
-                    userCount.textContent = `${data.count} users online`;
+                    userCount.innerHTML = `<i class="fas fa-users mr-1"></i>${data.count} users online`;
+                    break;
+                case 'online_users':
+                    updateOnlineUsers(data.users);
+                    break;
+                case 'typing':
+                    if (currentChatType === 'group') {
+                        showTypingIndicator(data.user);
+                    }
                     break;
             }
         }
 
-        function displayMessage(user, message, timestamp) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message flex items-start space-x-3';
-            
-            const isCurrentUser = user === username;
-            const time = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            messageDiv.innerHTML = `
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 rounded-full ${isCurrentUser ? 'avatar-gradient' : 'avatar-gradient-alt'} flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                        ${user.charAt(0).toUpperCase()}
+        function updateOnlineUsers(users) {
+            // Normalize payload to objects: { username, display_name }
+            const normalized = (users || []).map(u => {
+                if (typeof u === 'string') return { username: u, display_name: u };
+                return { username: u.username, display_name: u.display_name || u.username };
+            });
+
+            // Exclude current user from the sidebar list
+            const others = normalized.filter(u => u.username !== (currentUser && currentUser.username));
+
+            // Update count badge (other users only)
+            onlineCount.textContent = others.length;
+            onlineUsers.innerHTML = '';
+
+            if (others.length === 0) {
+                onlineUsers.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-user-slash text-2xl mb-2"></i>
+                        <p class="text-sm">No other users online</p>
                     </div>
+                `;
+                return;
+            }
+
+            // Sort by display name
+            others.sort((a, b) => a.display_name.localeCompare(b.display_name));
+
+            others.forEach(u => {
+                const userElement = document.createElement('div');
+                userElement.className = 'online-user flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors';
+                userElement.setAttribute('data-username', u.username);
+                userElement.setAttribute('data-display-name', u.display_name);
+                userElement.innerHTML = `
+                    <div class="flex items-center space-x-3 flex-1" onclick="startPrivateChat('${u.username}')">
+                        <div class="relative">
+                            <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-white text-sm"></i>
+                            </div>
+                            <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-semibold text-gray-800">${u.display_name}</div>
+                            <div class="text-xs text-green-600">Online</div>
+                        </div>
+                    </div>
+                    <button onclick="event.stopPropagation(); startPrivateChat('${u.username}')" class="private-chat-btn w-8 h-8 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-600 flex items-center justify-center transition-colors">
+                        <i class="fas fa-comment text-xs"></i>
+                    </button>
+                `;
+                onlineUsers.appendChild(userElement);
+                userDisplayMap[u.username] = u.display_name;
+                if (unreadCounts[u.username] > 0) {
+                    addUnreadBadge(userElement, unreadCounts[u.username]);
+                }
+            });
+        }
+
+        function startPrivateChat(username) {
+            currentPrivateUser = username;
+            const el = document.querySelector(`.online-user[data-username="${username}"]`);
+            currentPrivateDisplayName = el ? (el.getAttribute('data-display-name') || username) : username;
+            // Clear unread for this user upon opening
+            unreadCounts[username] = 0;
+            if (el) removeUnreadBadge(el);
+            switchToPrivateChat();
+
+            // Highlight the selected user in the online list via data attribute
+            document.querySelectorAll('.online-user').forEach(el => {
+                el.classList.remove('bg-purple-50', 'border-l-4', 'border-purple-500');
+                if (el.getAttribute('data-username') === username) {
+                    el.classList.add('bg-purple-50', 'border-l-4', 'border-purple-500');
+                }
+            });
+        }
+
+        function showEmptyDMPlaceholder() {
+            const name = currentPrivateDisplayName || currentPrivateUser || 'user';
+            chatMessages.innerHTML = `
+                <div id="empty-dm-placeholder" class="text-center py-10">
+                    <div class="w-16 h-16 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-comments text-2xl text-purple-600"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-700 mb-1">No messages yet</h3>
+                    <p class="text-gray-500 text-sm">Say hi to ${name} to start the conversation.</p>
                 </div>
-                <div class="flex-1">
-                    <div class="flex items-center space-x-2 mb-1">
-                        <span class="font-semibold text-gray-800">${escapeHtml(user)}</span>
-                        <span class="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded-full">${time}</span>
-                        ${isCurrentUser ? '<span class="text-xs bg-purple-100 text-purple-600 px-1 py-0.5 rounded-full font-medium">You</span>' : ''}
+            `;
+        }
+
+        function hideEmptyDMPlaceholder() {
+            const ph = document.getElementById('empty-dm-placeholder');
+            if (ph) ph.remove();
+        }
+
+        async function loadGroupChatHistory() {
+            chatMessages.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-purple-600"></i></div>';
+            
+            try {
+                // This would need an endpoint to get group chat history
+                // For now, clear the messages
+                chatMessages.innerHTML = '';
+                addSystemMessage('Group chat history loaded');
+            } catch (error) {
+                console.error('Error loading group chat history:', error);
+                chatMessages.innerHTML = '';
+            }
+        }
+
+        async function loadPrivateChatHistory() {
+            if (!currentPrivateUser) return;
+            
+            chatMessages.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-purple-600"></i></div>';
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/messages/private/${currentPrivateUser}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    chatMessages.innerHTML = '';
+                    if (!data.messages || data.messages.length === 0) {
+                        showEmptyDMPlaceholder();
+                    } else {
+                        hideEmptyDMPlaceholder();
+                        data.messages.forEach(msg => {
+                            addMessage(msg.sender, msg.message, msg.timestamp, true);
+                        });
+                    }
+                } else {
+                    chatMessages.innerHTML = '';
+                    addSystemMessage('Could not load private chat history');
+                }
+            } catch (error) {
+                console.error('Error loading private chat history:', error);
+                chatMessages.innerHTML = '';
+                addSystemMessage('Error loading chat history');
+            }
+        }
+
+        function addMessage(user, message, timestamp, isPrivate) {
+            const messageDiv = document.createElement('div');
+            const isCurrentUser = user === currentUser.username;
+            const time = new Date(timestamp).toLocaleTimeString();
+            
+            if (isCurrentUser) {
+                messageDiv.className = 'message flex justify-end';
+                messageDiv.innerHTML = `
+                    <div class="max-w-xs lg:max-w-md">
+                        <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-2xl rounded-br-none shadow-lg">
+                            <p class="text-sm">${escapeHtml(message)}</p>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1 text-right">${time}</div>
                     </div>
-                    <div class="message-bubble bg-gradient-to-r ${isCurrentUser ? 'from-purple-50 to-pink-50' : 'from-gray-50 to-slate-50'} rounded-xl px-3 py-2 text-gray-800 shadow-sm">
-                        <p class="text-sm leading-relaxed">${escapeHtml(message)}</p>
+                `;
+            } else {
+                messageDiv.className = 'message flex justify-start';
+                messageDiv.innerHTML = `
+                    <div class="max-w-xs lg:max-w-md">
+                        <div class="text-xs text-gray-600 mb-1">${isPrivate ? '🔒 ' : ''}${user}</div>
+                        <div class="bg-white text-gray-800 px-4 py-2 rounded-2xl rounded-bl-none shadow-lg border border-gray-200">
+                            <p class="text-sm">${escapeHtml(message)}</p>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">${time}</div>
                     </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addSystemMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message flex justify-center';
+            messageDiv.innerHTML = `
+                <div class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium">
+                    <i class="fas fa-info-circle mr-1"></i>${message}
                 </div>
             `;
             
             chatMessages.appendChild(messageDiv);
-            scrollToBottom();
-        }
-
-        function displaySystemMessage(message) {
-            const systemDiv = document.createElement('div');
-            systemDiv.className = 'text-center py-3';
-            systemDiv.innerHTML = `
-                <span class="text-sm text-gray-500 italic bg-gradient-to-r from-purple-100 to-pink-100 px-4 py-2 rounded-full font-medium">
-                    ${escapeHtml(message)}
-                </span>
-            `;
-            chatMessages.appendChild(systemDiv);
-            scrollToBottom();
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
         function showTypingIndicator(user) {
-            if (user !== username) {
-                typingIndicator.classList.remove('hidden');
-                clearTimeout(typingTimeout);
-                typingTimeout = setTimeout(() => {
-                    typingIndicator.classList.add('hidden');
-                }, 3000);
-            }
-        }
-
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message || !websocket) return;
-
-            websocket.send(JSON.stringify({
-                type: 'message',
-                user: username,
-                message: message
-            }));
-
-            messageInput.value = '';
-            messageInput.focus();
-        }
-
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `notification-toast fixed top-6 right-6 px-6 py-4 rounded-2xl shadow-2xl z-50 flex items-center space-x-3 ${
-                type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 
-                type === 'error' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 
-                'bg-gradient-to-r from-blue-500 to-purple-500'
-            } text-white`;
+            if (user === currentUser.username) return;
             
-            const icon = type === 'success' ? 'fa-check-circle' : 
-                         type === 'error' ? 'fa-exclamation-circle' : 
-                         'fa-info-circle';
-            
-            notification.innerHTML = `
-                <i class="fas ${icon} text-xl"></i>
-                <span class="font-medium">${message}</span>
+            typingIndicator.innerHTML = `
+                <span class="typing-indicator inline-flex items-center px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-medium">
+                    <i class="fas fa-ellipsis-h mr-2"></i>
+                    ${user} is typing...
+                </span>
             `;
+            typingIndicator.classList.remove('hidden');
             
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideInRight 0.3s ease-out reverse';
-                setTimeout(() => {
-                    notification.remove();
-                }, 300);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                typingIndicator.classList.add('hidden');
             }, 3000);
-        }
-
-        function scrollToBottom() {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
         function escapeHtml(text) {
@@ -458,27 +715,154 @@
             return div.innerHTML;
         }
 
-        // Event listeners
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            } else if (websocket) {
-                // Send typing indicator
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !websocket || websocket.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            if (currentChatType === 'group') {
+                // Send group message via WebSocket
                 websocket.send(JSON.stringify({
-                    type: 'typing',
-                    user: username
+                    type: 'message',
+                    message: message
+                }));
+            } else if (currentChatType === 'private' && currentPrivateUser) {
+                // Send private message via WebSocket (pure WebSocket flow)
+                hideEmptyDMPlaceholder();
+                const localTimestamp = new Date().toISOString();
+                addMessage(currentUser.username, message, localTimestamp, true);
+                websocket.send(JSON.stringify({
+                    type: 'private_message',
+                    receiver: currentPrivateUser,
+                    message: message
                 }));
             }
-        });
 
-        usernameInput.addEventListener('keypress', function(e) {
+            messageInput.value = '';
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification system
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'error' ? 'bg-red-500 text-white' :
+                type === 'warning' ? 'bg-yellow-500 text-white' :
+                type === 'success' ? 'bg-green-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            
+            const icon = type === 'success' ? 'fa-check-circle' : 
+                         type === 'error' ? 'fa-exclamation-circle' : 
+                         'fa-info-circle';
+            
+            notification.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-${
+                        type === 'error' ? 'exclamation-circle' :
+                        type === 'warning' ? 'exclamation-triangle' :
+                        type === 'success' ? 'check-circle' :
+                        'info-circle'
+                    }"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // DM notifications and unread helpers
+        function addUnreadBadge(userElement, count) {
+            const btn = userElement.querySelector('.private-chat-btn');
+            if (!btn) return;
+            btn.classList.add('relative');
+            let badge = btn.querySelector('.unread-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'unread-badge absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] leading-4 w-4 h-4 rounded-full text-center';
+                btn.appendChild(badge);
+            }
+            badge.textContent = String(count);
+        }
+
+        function removeUnreadBadge(userElement) {
+            const btn = userElement.querySelector('.private-chat-btn');
+            if (!btn) return;
+            const badge = btn.querySelector('.unread-badge');
+            if (badge) badge.remove();
+        }
+
+        function incrementUnread(username) {
+            unreadCounts[username] = (unreadCounts[username] || 0) + 1;
+            const el = document.querySelector(`.online-user[data-username="${username}"]`);
+            if (el) addUnreadBadge(el, unreadCounts[username]);
+        }
+
+        function getDisplayName(username) {
+            if (username === (currentUser && currentUser.username)) return currentUser.display_name || username;
+            const mapName = userDisplayMap[username];
+            if (mapName) return mapName;
+            const el = document.querySelector(`.online-user[data-username="${username}"]`);
+            if (el) return el.getAttribute('data-display-name') || username;
+            return username;
+        }
+
+        function showMessageToast(username, displayName, message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 bg-white text-gray-800 border border-gray-200 notification-toast cursor-pointer';
+            const snippet = message && message.length > 60 ? message.slice(0, 57) + '…' : (message || 'New message');
+            notification.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 rounded-full avatar-gradient flex items-center justify-center text-white"><i class="fas fa-user text-xs"></i></div>
+                    <div>
+                        <div class="text-sm font-semibold">New message from ${displayName}</div>
+                        <div class="text-xs text-gray-600">${escapeHtml(snippet)}</div>
+                    </div>
+                </div>
+            `;
+            notification.addEventListener('click', () => {
+                startPrivateChat(username);
+                notification.remove();
+            });
+            document.body.appendChild(notification);
+            setTimeout(() => { notification.remove(); }, 5000);
+        }
+
+        // Event listeners
+        messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                connect();
+                sendMessage();
+            } else if (websocket && websocket.readyState === WebSocket.OPEN && currentChatType === 'group') {
+                // Send typing indicator for group chat
+                if (!isTyping) {
+                    isTyping = true;
+                    websocket.send(JSON.stringify({ type: 'typing' }));
+                    
+                    clearTimeout(typingTimeout);
+                    typingTimeout = setTimeout(() => {
+                        isTyping = false;
+                    }, 3000);
+                }
             }
         });
 
-        // Focus username input on load
-        usernameInput.focus();
+        // Enable/disable message input based on connection
+        setInterval(() => {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            } else {
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            }
+        }, 1000);
     </script>
 </body>
 </html>
+
+        
+        

@@ -14,6 +14,9 @@ database = client.fastapi_db
 employees = database.employees
 todos = database.todos
 chat_messages = database.chat_messages
+users = database.users
+private_messages = database.private_messages
+private_chat_rooms = database.private_chat_rooms
 
 # Simple connection test
 async def connect_to_mongo():
