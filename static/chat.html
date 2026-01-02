@@ -143,12 +143,81 @@
                 transform: translateX(0);
             }
         }
+
+        /* Mobile-first responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            body, html {
+                height: 100vh;
+                overflow: hidden;
+            }
+            .sidebar-mobile {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100vh;
+                z-index: 50;
+                transition: left 0.3s ease;
+                display: flex;
+                flex-direction: column;
+            }
+            .sidebar-mobile.open {
+                left: 0;
+            }
+            .sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 40;
+                display: none;
+            }
+            .sidebar-overlay.show {
+                display: block;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+            .desktop-sidebar {
+                display: none !important;
+            }
+            .chat-title {
+                font-size: 1.25rem !important;
+            }
+            .message-bubble {
+                max-width: 85%;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-menu-btn,
+            .sidebar-mobile,
+            .sidebar-overlay {
+                display: none !important;
+            }
+            .desktop-sidebar {
+                display: block;
+            }
+        }
+
+        /* Safe-area helpers for iOS mobile browsers */
+        @supports (padding: env(safe-area-inset-bottom)) {
+            .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+            .pt-safe { padding-top: env(safe-area-inset-top); }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100">
+    <!-- Sidebar Overlay for mobile -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
     <div class="container mx-auto p-4 h-screen flex">
         <!-- Sidebar with Online Users -->
-        <div class="w-64 mr-4">
+        <div id="sidebar-desktop" class="desktop-sidebar w-64 mr-4">
             <div class="glass-effect rounded-2xl shadow-xl p-4 h-full flex flex-col">
                 <!-- User Info -->
                 <div class="mb-4 pb-4 border-b border-gray-200">
@@ -199,6 +268,56 @@
             </div>
         </div>
 
+        <!-- Mobile Sidebar -->
+        <div id="sidebar-mobile" class="sidebar-mobile glass-effect shadow-xl">
+            <!-- Mobile Header -->
+            <div class="flex items-center justify-between p-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    <div>
+                        <div id="current-user-name-mobile" class="font-semibold text-gray-800">Loading...</div>
+                        <div class="text-xs text-green-600 flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                            Online
+                        </div>
+                    </div>
+                </div>
+                <button onclick="closeMobileSidebar()" class="text-gray-500 hover:text-gray-700 p-2">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Mobile Chat Tabs -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex space-x-2">
+                    <button id="group-chat-tab-mobile" class="chat-tab-mobile active flex-1 px-3 py-2 rounded-lg text-sm font-medium">
+                        <i class="fas fa-users mr-2"></i>Group Chat
+                    </button>
+                    <button id="private-chat-tab-mobile" class="chat-tab-mobile flex-1 px-3 py-2 rounded-lg text-sm font-medium">
+                        <i class="fas fa-envelope mr-2"></i>Private
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Online Users -->
+            <div class="flex-1 overflow-hidden p-4">
+                <div class="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-circle text-green-500 text-xs mr-2 animate-pulse"></i>
+                        Online Users
+                    </div>
+                    <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full font-medium">
+                        <span id="online-count-mobile">0</span>
+                    </span>
+                </div>
+                <div id="online-users-mobile" class="space-y-2 overflow-y-auto" style="max-height: calc(100vh - 280px);">
+                    <!-- Online users will be listed here -->
+                </div>
+            </div>
+        </div>
+
         <!-- Main Chat Area -->
         <div class="flex-1 flex flex-col min-h-0">
             <!-- Header -->
@@ -224,6 +343,9 @@
                             </p>
                         </div>
                     </div>
+                    <button id="mobile-menu-btn" class="mobile-menu-btn md:hidden w-10 h-10 rounded-lg bg-white/80 text-purple-600 shadow flex items-center justify-center backdrop-blur border border-white/60">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
             </div>
 
@@ -241,7 +363,7 @@
             </div>
 
             <!-- Message Input -->
-            <div class="glass-effect rounded-2xl shadow-xl p-4">
+            <div class="glass-effect rounded-2xl shadow-xl p-4 pb-safe">
                 <div class="flex items-center space-x-3">
                     <div class="relative flex-1">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -290,11 +412,16 @@
         const userCount = document.getElementById('user-count');
         const typingIndicator = document.getElementById('typing-indicator');
         const currentUser_name = document.getElementById('current-user-name');
+        const currentUser_name_mobile = document.getElementById('current-user-name-mobile');
         const onlineUsers = document.getElementById('online-users');
+        const onlineUsersMobile = document.getElementById('online-users-mobile');
         const onlineCount = document.getElementById('online-count');
+        const onlineCountMobile = document.getElementById('online-count-mobile');
         const chatTitle = document.getElementById('chat-title');
         const groupChatTab = document.getElementById('group-chat-tab');
         const privateChatTab = document.getElementById('private-chat-tab');
+        const groupChatTabMobile = document.getElementById('group-chat-tab-mobile');
+        const privateChatTabMobile = document.getElementById('private-chat-tab-mobile');
 
         // Check authentication on load
         window.addEventListener('load', async () => {
@@ -308,6 +435,7 @@
             
             currentUser = JSON.parse(user);
             currentUser_name.textContent = currentUser.display_name || currentUser.username;
+            currentUser_name_mobile.textContent = currentUser.display_name || currentUser.username;
             
             // Show welcome message for newly logged in users
             const urlParams = new URLSearchParams(window.location.search);
@@ -345,6 +473,15 @@
         privateChatTab.addEventListener('click', () => {
             switchToPrivateChat();
         });
+        // Mobile tab listeners
+        groupChatTabMobile.addEventListener('click', () => {
+            switchToGroupChat();
+            closeMobileSidebar();
+        });
+        privateChatTabMobile.addEventListener('click', () => {
+            switchToPrivateChat();
+            closeMobileSidebar();
+        });
 
         function switchToGroupChat() {
             currentChatType = 'group';
@@ -352,11 +489,13 @@
             
             groupChatTab.classList.add('active');
             privateChatTab.classList.remove('active');
+            groupChatTabMobile.classList.add('active');
+            privateChatTabMobile.classList.remove('active');
             
             chatTitle.textContent = 'Group Chat';
             messageInput.placeholder = 'Type your message...';
             
-            // Clear user selection highlights
+            // Clear user selection highlights (desktop and mobile)
             document.querySelectorAll('.online-user').forEach(userElement => {
                 userElement.classList.remove('bg-purple-50', 'border-l-4', 'border-purple-500');
             });
@@ -381,6 +520,8 @@
             
             privateChatTab.classList.add('active');
             groupChatTab.classList.remove('active');
+            privateChatTabMobile.classList.add('active');
+            groupChatTabMobile.classList.remove('active');
             
             const displayName = currentPrivateDisplayName || currentPrivateUser;
             chatTitle.textContent = `Private Chat - ${displayName}`;
@@ -518,14 +659,18 @@
             // Update count badge (other users only)
             onlineCount.textContent = others.length;
             onlineUsers.innerHTML = '';
+            onlineCountMobile.textContent = others.length;
+            onlineUsersMobile.innerHTML = '';
 
             if (others.length === 0) {
-                onlineUsers.innerHTML = `
+                const emptyHtml = `
                     <div class="text-center py-8 text-gray-500">
                         <i class="fas fa-user-slash text-2xl mb-2"></i>
                         <p class="text-sm">No other users online</p>
                     </div>
                 `;
+                onlineUsers.innerHTML = emptyHtml;
+                onlineUsersMobile.innerHTML = emptyHtml;
                 return;
             }
 
@@ -533,11 +678,7 @@
             others.sort((a, b) => a.display_name.localeCompare(b.display_name));
 
             others.forEach(u => {
-                const userElement = document.createElement('div');
-                userElement.className = 'online-user flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors';
-                userElement.setAttribute('data-username', u.username);
-                userElement.setAttribute('data-display-name', u.display_name);
-                userElement.innerHTML = `
+                const userHtml = `
                     <div class="flex items-center space-x-3 flex-1" onclick="startPrivateChat('${u.username}')">
                         <div class="relative">
                             <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
@@ -554,13 +695,40 @@
                         <i class="fas fa-comment text-xs"></i>
                     </button>
                 `;
+                // Desktop
+                const userElement = document.createElement('div');
+                userElement.className = 'online-user flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors';
+                userElement.setAttribute('data-username', u.username);
+                userElement.setAttribute('data-display-name', u.display_name);
+                userElement.innerHTML = userHtml;
                 onlineUsers.appendChild(userElement);
+                // Mobile
+                const userElementMobile = document.createElement('div');
+                userElementMobile.className = 'online-user flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors';
+                userElementMobile.setAttribute('data-username', u.username);
+                userElementMobile.setAttribute('data-display-name', u.display_name);
+                userElementMobile.innerHTML = userHtml;
+                onlineUsersMobile.appendChild(userElementMobile);
+                // Sync badges
                 userDisplayMap[u.username] = u.display_name;
                 if (unreadCounts[u.username] > 0) {
                     addUnreadBadge(userElement, unreadCounts[u.username]);
+                    addUnreadBadge(userElementMobile, unreadCounts[u.username]);
                 }
             });
         }
+
+        function openMobileSidebar() {
+            document.getElementById('sidebar-mobile').classList.add('open');
+            document.getElementById('sidebar-overlay').classList.add('show');
+        }
+        function closeMobileSidebar() {
+            document.getElementById('sidebar-mobile').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('show');
+        }
+        // Mobile menu button and overlay handlers
+        document.getElementById('mobile-menu-btn').addEventListener('click', openMobileSidebar);
+        document.getElementById('sidebar-overlay').addEventListener('click', closeMobileSidebar);
 
         function startPrivateChat(username) {
             currentPrivateUser = username;
@@ -569,15 +737,20 @@
             // Clear unread for this user upon opening
             unreadCounts[username] = 0;
             if (el) removeUnreadBadge(el);
+            // Also clear mobile badge
+            const elMobile = document.querySelector(`#online-users-mobile .online-user[data-username="${username}"]`);
+            if (elMobile) removeUnreadBadge(elMobile);
             switchToPrivateChat();
 
-            // Highlight the selected user in the online list via data attribute
+            // Highlight the selected user in the online list via data attribute (desktop and mobile)
             document.querySelectorAll('.online-user').forEach(el => {
                 el.classList.remove('bg-purple-50', 'border-l-4', 'border-purple-500');
                 if (el.getAttribute('data-username') === username) {
                     el.classList.add('bg-purple-50', 'border-l-4', 'border-purple-500');
                 }
             });
+            // Close mobile sidebar after selection
+            closeMobileSidebar();
         }
 
         function showEmptyDMPlaceholder() {
